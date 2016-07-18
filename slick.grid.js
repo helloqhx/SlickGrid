@@ -754,6 +754,17 @@ if (typeof Slick === "undefined") {
 
     function setupColumnReorder() {
       $headers.filter(":ui-sortable").sortable("destroy");
+            var columnScrollTimer = null;
+            var viewportLeft = $viewport.offset().left;
+
+            function scrollColumnsRight() {
+                $viewport[0].scrollLeft = $viewport[0].scrollLeft + 10;
+            }
+
+            function scrollColumnsLeft() {
+                $viewport[0].scrollLeft = $viewport[0].scrollLeft - 10;
+            }
+
       $headers.sortable({
         containment: "parent",
         distance: 3,
@@ -770,7 +781,24 @@ if (typeof Slick === "undefined") {
         beforeStop: function (e, ui) {
           $(ui.helper).removeClass("slick-header-column-active");
         },
+        sort: function(e, ui) {
+                   if ( e.originalEvent.pageX > $viewport[0].clientWidth ) {
+                       if ( !( columnScrollTimer ) ) {
+                           columnScrollTimer = setInterval(scrollColumnsRight, 100);
+                        }
+                    } else if ( e.originalEvent.pageX < viewportLeft ) {
+                        if ( !( columnScrollTimer ) ) {
+                            columnScrollTimer = setInterval(scrollColumnsLeft, 100);
+                        }
+                    } else {
+                        clearInterval(columnScrollTimer);
+                        columnScrollTimer = null;
+                    }
+                },
         stop: function (e) {
+                    clearInterval( columnScrollTimer );
+                    columnScrollTimer = null;
+
           if (!getEditorLock().commitCurrentEdit()) {
             $(this).sortable("cancel");
             return;
@@ -1735,6 +1763,7 @@ if (typeof Slick === "undefined") {
     }
 
     function updateRowCount() {
+      var dataLength = getDataLength();
       if (!initialized) { return; }
       var dataLengthIncludingAddNew = getDataLengthIncludingAddNew();
       numberOfRows = dataLengthIncludingAddNew +
@@ -2167,10 +2196,11 @@ if (typeof Slick === "undefined") {
     }
 
     function asyncPostProcessRows() {
+      var dataLength = getDataLength();
       while (postProcessFromRow <= postProcessToRow) {
         var row = (vScrollDir >= 0) ? postProcessFromRow++ : postProcessToRow--;
         var cacheEntry = rowsCache[row];
-        if (!cacheEntry || row >= getDataLength()) {
+        if (!cacheEntry || row >= dataLength) {
           continue;
         }
 
@@ -3051,8 +3081,9 @@ if (typeof Slick === "undefined") {
 
     function gotoDown(row, cell, posX) {
       var prevCell;
+      var dataLengthIncludingAddNew = getDataLengthIncludingAddNew();
       while (true) {
-        if (++row >= getDataLengthIncludingAddNew()) {
+        if (++row >= dataLengthIncludingAddNew) {
           return null;
         }
 
@@ -3113,7 +3144,8 @@ if (typeof Slick === "undefined") {
       }
 
       var firstFocusableCell = null;
-      while (++row < getDataLengthIncludingAddNew()) {
+      var dataLengthIncludingAddNew = getDataLengthIncludingAddNew();
+      while (++row < dataLengthIncludingAddNew) {
         firstFocusableCell = findFirstFocusableCell(row);
         if (firstFocusableCell !== null) {
           return {
